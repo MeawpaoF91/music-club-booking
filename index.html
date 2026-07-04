@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจองห้องซ้อม SUT Music Club</title>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #d35400; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:disabled { background-color: #999; cursor: not-allowed; }
+        .alert-box { background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; font-size: 0.9em; margin-bottom: 15px; border-left: 5px solid #ffeeba; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="color: #d35400; text-align: center;">🎸 SUT MUSICCLUB</h2>
+        
+        <div class="alert-box">
+            <strong>📌 กฎการใช้ห้องซ้อม:</strong><br>
+            • จองเวลาซ้อม วันต่อวัน<br>
+            • มาก่อนเวลาซ้อม 5-10 นาที<br>
+            • ⚠️ 2 อาทิตย์ก่อนสอบ ไม่เปิดให้ใช้ห้องซ้อม
+        </div>
+
+        <p id="profileBox" style="color: gray; text-align: center;">กำลังโหลดข้อมูล...</p>
+
+        <label>ชื่อวงดนตรี:</label>
+        <input type="text" id="bandName" placeholder="เช่น วงร็อคหน้าใหม่">
+
+        <label>เลือกรอบเวลา (วันนี้):</label>
+        <select id="timeSlot">
+            <option value="">กำลังโหลดคิวว่าง...</option>
+        </select>
+
+        <button id="bookBtn" onclick="bookRoom()">ยืนยันการจอง</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // ⚠️ 1. เอาโค้ด firebaseConfig ของคุณมาวางทับตรงนี้ ⚠️
+        const firebaseConfig = {
+            apiKey: "AIzaSyBta-nZcjJ8CUlJhcDSZbnoWuKjnvO1TNs",
+            authDomain: "music-club-booking-dcd36.firebaseapp.com",
+            databaseURL: "https://music-club-booking-dcd36-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "music-club-booking-dcd36",
+            storageBucket: "music-club-booking-dcd36.firebasestorage.app",
+            messagingSenderId: "577802746816",
+            appId: "1:577802746816:web:56c58e1f2a6a54acc1e625",
+            measurementId: "G-MLX1P2FX21"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let userId = "";
+        let displayName = "";
+
+        // ⚠️ 2. เอา LIFF ID มาใส่ตรงนี้ ⚠️
+        const myLiffId = "2010604129-ok0ftRAH"; 
+
+        const today = new Date();
+        const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        const dayOfWeek = today.getDay(); // 0 = อาทิตย์, 1 = จันทร์ ... 6 = เสาร์
+
+        async function initLine() {
+            await liff.init({ liffId: myLiffId });
+            if (liff.isLoggedIn()) {
+                const profile = await liff.getProfile();
+                userId = profile.userId;
+                displayName = profile.displayName;
+                document.getElementById("profileBox").innerText = `ผู้จอง: ${displayName}`;
+            } else {
+                liff.login();
+            }
+        }
+        initLine();
+
+        function loadSchedule() {
+            let slots = [];
+            
+            // เช็คว่าเป็นวันธรรมดาหรือวันหยุด เพื่อแสดงเวลาตามป้ายประกาศ
+            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                // จันทร์ - ศุกร์ (13.00 - 17.00) หั่นเป็นรอบละ 1 ชม.
+                slots = ["13:00-14:00", "14:00-15:00", "15:00-16:00", "16:00-17:00"];
+            } else {
+                // เสาร์ - อาทิตย์ (10.00 - 15.00) หั่นเป็นรอบละ 1 ชม.
+                slots = ["10:00-11:00", "11:00-12:00", "12:00-13:00", "13:00-14:00", "14:00-15:00"];
+            }
+
+            const timeSlotDropdown = document.getElementById("timeSlot");
+            const dbRef = ref(db, `bookings/${dateStr}`);
+            
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val() || {};
+                timeSlotDropdown.innerHTML = ""; 
+                
+                let hasAvailableSlot = false;
+
+                slots.forEach(slot => {
+                    const isBooked = data[slot] ? true : false;
+                    const option = document.createElement("option");
+                    option.value = slot;
+                    
+                    if (isBooked) {
+                        option.disabled = true;
+                        option.innerText = `❌ ${slot} น. (${data[slot].band_name})`;
+                    } else {
+                        option.innerText = `✅ ${slot} น. (ว่าง)`;
+                        hasAvailableSlot = true; 
+                    }
+                    
+                    timeSlotDropdown.appendChild(option);
+                });
+
+                const bookBtn = document.getElementById("bookBtn");
+                if (!hasAvailableSlot) {
+                    bookBtn.disabled = true;
+                    bookBtn.innerText = "คิวซ้อมวันนี้เต็มหมดแล้ว";
+                } else {
+                    bookBtn.disabled = false;
+                    bookBtn.innerText = "ยืนยันการจอง";
+                }
+            });
+        }
+        
+        loadSchedule();
+
+        window.bookRoom = async function() {
+            const bandName = document.getElementById("bandName").value;
+            const timeSlot = document.getElementById("timeSlot").value;
+            
+            if(!bandName) {
+                alert("อย่าลืมใส่ชื่อวงดนตรีนะครับ!");
+                return;
+            }
+            if(!timeSlot) {
+                alert("คิวเต็ม หรือยังไม่ได้เลือกรอบเวลาครับ");
+                return;
+            }
+
+            try {
+                // 1. บันทึกข้อมูลลง Firebase Realtime Database
+                await set(ref(db, `bookings/${dateStr}/${timeSlot}`), {
+                    band_name: bandName,
+                    booked_by_id: userId,
+                    user_name: displayName,
+                    timestamp: Date.now()
+                });
+
+                // 🌟 2. ส่งการแจ้งเตือนเข้า Discord 🌟
+                // นำ URL ที่ก๊อปปี้จาก Discord มาวางในเครื่องหมายคำพูดด้านล่าง
+                const discordWebhookUrl = "ใส่_DISCORD_WEBHOOK_URL_ที่นี่"; 
+                
+                const message = `🎸 **มีคิวจองห้องซ้อมใหม่!**\n**วง:** ${bandName}\n**เวลา:** ${timeSlot} น.\n**ผู้จอง:** ${displayName}`;
+                
+                // คำสั่งส่งข้อมูลไป Discord
+                await fetch(discordWebhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: message
+                    })
+                });
+                // 🌟 สิ้นสุดโค้ดแจ้งเตือน Discord 🌟
+
+                alert("จองห้องซ้อมสำเร็จแล้ว!");
+                liff.closeWindow(); 
+            } catch (error) {
+                alert("เกิดข้อผิดพลาด: " + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
