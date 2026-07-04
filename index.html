@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจองห้องซ้อม ชมรมดนตรีสากล SUT</title>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #06C755; color: white; border: none; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🎸 จองห้องซ้อมดนตรี</h2>
+        <p id="profileBox" style="color: gray;">กำลังโหลดข้อมูลบัญชี LINE...</p>
+
+        <label>ชื่อวงดนตรี:</label>
+        <input type="text" id="bandName" placeholder="เช่น วงร็อคหน้าใหม่">
+
+        <label>เลือกรอบเวลา (วันนี้):</label>
+        <select id="timeSlot">
+            <option value="16:00-18:00">16:00 - 18:00 น.</option>
+            <option value="18:00-20:00">18:00 - 20:00 น.</option>
+            <option value="20:00-22:00">20:00 - 22:00 น.</option>
+        </select>
+
+        <button onclick="bookRoom()">ยืนยันการจอง</button>
+    </div>
+
+    <script type="module">
+        // โหลด Firebase แบบ Modular
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // ⚠️ 1. เอาโค้ด firebaseConfig ที่ก๊อปปี้ไว้ มาวางทับตรงนี้เลยครับ ⚠️
+        const firebaseConfig = {
+            apiKey: "AIzaSyBta-nZcjJ8CUlJhcDSZbnoWuKjnvO1TNs",
+            authDomain: "music-club-booking-dcd36.firebaseapp.com",
+            databaseURL: "https://music-club-booking-dcd36-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "music-club-booking-dcd36",
+            storageBucket: "music-club-booking-dcd36.firebasestorage.app",
+            messagingSenderId: "577802746816",
+            appId: "1:577802746816:web:56c58e1f2a6a54acc1e625",
+            measurementId: "G-MLX1P2FX21"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let userId = "";
+        let displayName = "";
+
+        // ⚠️ 2. เอา LIFF ID มาใส่ตรงนี้ ⚠️
+        const myLiffId = "2010604129-ok0ftRAH"; 
+
+        async function initLine() {
+            await liff.init({ liffId: myLiffId });
+            if (liff.isLoggedIn()) {
+                const profile = await liff.getProfile();
+                userId = profile.userId;
+                displayName = profile.displayName;
+                document.getElementById("profileBox").innerText = `ผู้จอง: ${displayName}`;
+            } else {
+                liff.login(); // ถ้าไม่ได้เปิดในแอปไลน์ ให้เด้งไปหน้าล็อกอิน
+            }
+        }
+        initLine();
+
+        // 3. ฟังก์ชันบันทึกข้อมูลการจองลง Firebase Realtime Database
+        window.bookRoom = async function() {
+            const bandName = document.getElementById("bandName").value;
+            const timeSlot = document.getElementById("timeSlot").value;
+            
+            // ดึงวันที่ปัจจุบันมาเป็น Key (เช่น "2026-07-04")
+            const today = new Date();
+            const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+            if(!bandName) {
+                alert("อย่าลืมใส่ชื่อวงดนตรีนะครับ!");
+                return;
+            }
+
+            try {
+                // บันทึกข้อมูลลงฐานข้อมูล
+                await set(ref(db, `bookings/${dateStr}/${timeSlot}`), {
+                    band_name: bandName,
+                    booked_by_id: userId,
+                    user_name: displayName,
+                    timestamp: Date.now()
+                });
+                alert("จองห้องซ้อมสำเร็จแล้ว!");
+                liff.closeWindow(); // สั่งปิดหน้าจอแล้วกลับไปที่แชท
+            } catch (error) {
+                alert("เกิดข้อผิดพลาด: " + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
