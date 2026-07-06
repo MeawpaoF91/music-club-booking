@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจองห้องซ้อม SUT Music Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Anton&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stage-black: #120d09;
+            --stage-black-2: #1c1410;
+            --ticket-cream: #f4e6bf;
+            --ticket-cream-2: #ecd9a2;
+            --gold: #d9a94f;
+            --gold-bright: #f0c565;
+            --ink: #26190f;
+            --amp-red: #b6392a;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            min-height: 100vh;
+            background:
+                radial-gradient(ellipse 60% 40% at 50% 0%, rgba(217, 169, 79, 0.16), transparent 60%),
+                var(--stage-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* subtle grain texture, like paper/poster grunge */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+        }
+
+        .wrap {
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .eyebrow {
+            text-align: center;
+            color: var(--gold);
+            font-family: 'Anton', 'Kanit', sans-serif;
+            letter-spacing: 0.35em;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            opacity: 0.85;
+        }
+
+        .wordmark {
+            text-align: center;
+            color: var(--gold-bright);
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            margin: 0 0 22px; /* ปรับ Margin ให้เว้นระยะห่างจากตั๋วพอดี */
+            text-shadow: 0 0 24px rgba(240, 197, 101, 0.35);
+        }
+
+        /* ---- ticket / backstage pass card ---- */
+        .ticket {
+            background: linear-gradient(180deg, var(--ticket-cream) 0%, var(--ticket-cream-2) 100%);
+            border-radius: 18px;
+            box-shadow:
+                0 30px 60px -20px rgba(0,0,0,0.6),
+                0 0 0 1px rgba(217,169,79,0.25);
+            position: relative;
+            overflow: visible;
+        }
+
+        .ticket-main {
+            padding: 26px 26px 18px;
+        }
+
+        .ticket-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .pick {
+            width: 22px;
+            height: 26px;
+            flex-shrink: 0;
+            fill: var(--amp-red);
+        }
+
+        .ticket-title {
+            font-weight: 700;
+            font-size: 17px;
+            color: var(--ink);
+            letter-spacing: 0.01em;
+        }
+
+        .ticket-sub {
+            font-size: 12px;
+            color: #6b5732;
+            margin: 0 0 16px;
+            padding-bottom: 16px;
+            border-bottom: 1.5px dashed rgba(38,25,15,0.25);
+        }
+
+        .rules {
+            background: rgba(38, 25, 15, 0.06);
+            border-left: 3px solid var(--amp-red);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #4a3820;
+            margin-bottom: 18px;
+        }
+        .rules strong { color: var(--ink); }
+        .rules .warn { color: var(--amp-red); font-weight: 600; }
+
+        label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #6b5732;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            margin: 14px 0 6px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 9px;
+            border: 1.5px solid rgba(38,25,15,0.18);
+            background-color: rgba(255,255,255,0.55);
+            color: var(--ink);
+            font-family: 'Kanit', sans-serif;
+            font-size: 14.5px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+
+        input::placeholder { color: #9c8b66; }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--amp-red);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(182, 57, 42, 0.14);
+        }
+
+        select { cursor: pointer; }
+        select option:disabled { color: #b0a48a; }
+
+        /* perforation divider between ticket body and stub */
+        .perforation {
+            position: relative;
+            height: 0;
+        }
+        .perforation::before {
+            content: "";
+            position: absolute;
+            left: -1px; right: -1px; top: 0;
+            border-top: 2.5px dashed rgba(38,25,15,0.3);
+        }
+        .notch {
+            position: absolute;
+            top: -11px;
+            width: 22px; height: 22px;
+            background: var(--stage-black-2);
+            border-radius: 50%;
+        }
+        .notch { background: var(--stage-black); box-shadow: inset 0 0 0 1px rgba(217,169,79,0.2); }
+        .notch.left { left: -11px; }
+        .notch.right { right: -11px; }
+
+        .stub {
+            padding: 16px 26px 22px;
+        }
+
+        button#bookBtn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 11px;
+            border: none;
+            background: linear-gradient(180deg, #d9432f, var(--amp-red));
+            color: #fbe9c8;
+            font-family: 'Kanit', sans-serif;
+            font-weight: 700;
+            font-size: 15.5px;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            box-shadow: 0 10px 20px -8px rgba(182,57,42,0.55);
+            transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+        }
+
+        button#bookBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 26px -8px rgba(182,57,42,0.65);
+            filter: brightness(1.05);
+        }
+        button#bookBtn:active { transform: translateY(0); }
+
+        button#bookBtn:disabled {
+            background: #8a7a5f;
+            color: #f4e6bf;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .foot-note {
+            text-align: center;
+            font-size: 11px;
+            color: #8a7248;
+            margin-top: 12px;
+            letter-spacing: 0.02em;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .wrap { animation: none; }
+            button#bookBtn { transition: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="eyebrow">Backstage Pass</div>
+        
+        <div class="wordmark">SUT Music Club</div>
+
+        <div class="ticket">
+            <div class="ticket-main">
+                <div class="ticket-head">
+                    <span class="ticket-title">จองห้องซ้อม</span>
+                </div>
+                <p class="ticket-sub">เลือกรอบเวลาแล้วกรอกข้อมูลวงของคุณ</p>
+
+                <div class="rules">
+                    <strong>📌 กฎการใช้ห้องซ้อม:</strong><br>
+                    • จองเวลาซ้อม วันต่อวัน<br>
+                    • มาก่อนเวลาซ้อม 5-10 นาที<br>
+                    <span class="warn">⚠️ 2 อาทิตย์ก่อนสอบ ไม่เปิดให้ใช้ห้องซ้อม</span>
+                </div>
+
+                <label>ชื่อผู้จอง (ตัวแทนวง)</label>
+                <input type="text" id="userName" placeholder="รหัสนักศึกษา">
+
+                <label>ชื่อวงดนตรี</label>
+                <input type="text" id="bandName" placeholder="เช่น วงร็อคหน้าใหม่">
+
+                <label>เลือกรอบเวลา (วันนี้)</label>
+                <select id="timeSlot">
+                    <option value="">กำลังโหลดคิวว่าง...</option>
+                </select>
+            </div>
+
+            <div class="perforation">
+                <div class="notch left"></div>
+                <div class="notch right"></div>
+            </div>
+
+            <div class="stub">
+                <button id="bookBtn" onclick="bookRoom()">ยืนยันการจอง</button>
+            </div>
+        </div>
+        <p class="foot-note">SUT MUSIC CLUB · ROOM BOOKING</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // ⚠️ 1. เอาโค้ด firebaseConfig ของคุณมาวางทับตรงนี้ ⚠️
+        const firebaseConfig = {
+            apiKey: "AIzaSyBta-nZcjJ8CUlJhcDSZbnoWuKjnvO1TNs",
+            authDomain: "music-club-booking-dcd36.firebaseapp.com",
+            databaseURL: "https://music-club-booking-dcd36-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "music-club-booking-dcd36",
+            storageBucket: "music-club-booking-dcd36.firebasestorage.app",
+            messagingSenderId: "577802746816",
+            appId: "1:577802746816:web:56c58e1f2a6a54acc1e625",
+            measurementId: "G-MLX1P2FX21"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const today = new Date();
+        const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        const dayOfWeek = today.getDay(); 
+
+        function loadSchedule() {
+            let slots = [];
+            
+            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                slots = ["13:00-14:00", "14:00-15:00", "15:00-16:00", "16:00-17:00"];
+            } else {
+                slots = ["10:00-11:00", "11:00-12:00", "12:00-13:00", "13:00-14:00", "14:00-15:00"];
+            }
+
+            const timeSlotDropdown = document.getElementById("timeSlot");
+            const dbRef = ref(db, `bookings/${dateStr}`);
+            
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val() || {};
+                timeSlotDropdown.innerHTML = ""; 
+                
+                let hasAvailableSlot = false;
+
+                slots.forEach(slot => {
+                    const isBooked = data[slot] ? true : false;
+                    const option = document.createElement("option");
+                    option.value = slot;
+                    
+                    if (isBooked) {
+                        option.disabled = true;
+                        option.innerText = `❌ ${slot} น. (${data[slot].band_name})`;
+                    } else {
+                        option.innerText = `✅ ${slot} น. (ว่าง)`;
+                        hasAvailableSlot = true; 
+                    }
+                    
+                    timeSlotDropdown.appendChild(option);
+                });
+
+                const bookBtn = document.getElementById("bookBtn");
+                if (!hasAvailableSlot) {
+                    bookBtn.disabled = true;
+                    bookBtn.innerText = "คิวซ้อมวันนี้เต็มหมดแล้ว";
+                } else {
+                    bookBtn.disabled = false;
+                    bookBtn.innerText = "ยืนยันการจอง";
+                }
+            });
+        }
+        
+        loadSchedule();
+
+        window.bookRoom = async function() {
+            const userName = document.getElementById("userName").value;
+            const bandName = document.getElementById("bandName").value;
+            const timeSlot = document.getElementById("timeSlot").value;
+            
+            // เช็คว่ากรอกข้อมูลครบไหม
+            if(!userName) {
+                alert("อย่าลืมใส่ชื่อผู้จองนะครับ!");
+                return;
+            }
+            if(!bandName) {
+                alert("อย่าลืมใส่ชื่อวงดนตรีนะครับ!");
+                return;
+            }
+            if(!timeSlot) {
+                alert("คิวเต็ม หรือยังไม่ได้เลือกรอบเวลาครับ");
+                return;
+            }
+
+            try {
+                // บันทึกฐานข้อมูล Firebase
+                await set(ref(db, `bookings/${dateStr}/${timeSlot}`), {
+                    band_name: bandName,
+                    booked_by_id: "Website_Guest", // เปลี่ยนจาก userId ของไลน์ เป็นสถานะ Guest
+                    user_name: userName, // ดึงชื่อจากช่องที่พิมพ์เข้ามา
+                    timestamp: Date.now()
+                });
+
+                // ⚠️ 2. เอา Discord Webhook URL มาวางตรงนี้ ⚠️
+                const discordWebhookUrl = "https://discordapp.com/api/webhooks/1522969851738456128/uLLgTHlfnx27AN_HUSzc-PbyYehMTDAkSWAENmfYOP5yJ4F84AGIqsJVCSn6x4MpjtC6"; 
+                
+                const message = `🎸 **มีคิวจองห้องซ้อมใหม่!**\n**วง:** ${bandName}\n**เวลา:** ${timeSlot} น.\n**ผู้จอง:** ${userName}`;
+                
+                await fetch(discordWebhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: message
+                    })
+                });
+
+                alert("จองห้องซ้อมสำเร็จแล้ว!");
+                
+                // รีเฟรชหน้าเว็บเพื่อเคลียร์ฟอร์มให้ว่างสำหรับคนต่อไป
+                window.location.reload(); 
+
+            } catch (error) {
+                alert("เกิดข้อผิดพลาด: " + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
