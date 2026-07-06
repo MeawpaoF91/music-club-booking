@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจองห้องซ้อม SUT Music Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Anton&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stage-black: #120d09;
+            --stage-black-2: #1c1410;
+            --ticket-cream: #f4e6bf;
+            --ticket-cream-2: #ecd9a2;
+            --gold: #d9a94f;
+            --gold-bright: #f0c565;
+            --ink: #26190f;
+            --amp-red: #b6392a;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            min-height: 100vh;
+            background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(217, 169, 79, 0.16), transparent 60%), var(--stage-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        .wrap { width: 100%; max-width: 420px; animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+        @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+        .eyebrow { text-align: center; color: var(--gold); font-family: 'Anton', sans-serif; letter-spacing: 0.35em; font-size: 12px; text-transform: uppercase; margin-bottom: 6px; }
+        .wordmark { text-align: center; color: var(--gold-bright); font-size: 30px; font-weight: 800; margin: 0 0 22px; text-shadow: 0 0 24px rgba(240, 197, 101, 0.35); }
+
+        .ticket { background: linear-gradient(180deg, var(--ticket-cream) 0%, var(--ticket-cream-2) 100%); border-radius: 18px; padding: 26px; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6); }
+        .ticket-title { font-weight: 700; font-size: 17px; color: var(--ink); }
+        .ticket-sub { font-size: 12px; color: #6b5732; margin: 0 0 16px; padding-bottom: 16px; border-bottom: 1.5px dashed rgba(38,25,15,0.25); }
+
+        .rules { background: rgba(38, 25, 15, 0.06); border-left: 3px solid var(--amp-red); border-radius: 6px; padding: 10px 12px; font-size: 12.5px; line-height: 1.7; color: #4a3820; margin-bottom: 18px; }
+        .rules .warn { color: var(--amp-red); font-weight: 600; }
+
+        label { display: block; font-size: 12.5px; font-weight: 600; color: #6b5732; text-transform: uppercase; margin: 14px 0 6px; }
+        input, select { width: 100%; padding: 11px 12px; border-radius: 9px; border: 1.5px solid rgba(38,25,15,0.18); font-family: 'Kanit', sans-serif; }
+        
+        button#bookBtn { width: 100%; padding: 14px; border-radius: 11px; border: none; background: var(--amp-red); color: #fbe9c8; font-weight: 700; cursor: pointer; margin-top: 20px; }
+        button#bookBtn:disabled { background: #8a7a5f; }
+        
+        .foot-note { text-align: center; font-size: 11px; color: #8a7248; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="eyebrow">Backstage Pass</div>
+        <div class="wordmark">SUT Music Club</div>
+
+        <div class="ticket">
+            <div class="ticket-title">จองห้องซ้อม</div>
+            <p class="ticket-sub">กรุณากรอกข้อมูลให้ครบก่อนทำการจอง</p>
+
+            <div class="rules">
+                <strong>📌 กฎการจองห้อง:</strong><br>
+                • กรุณามาถึงก่อนเวลา 5-10 นาที เพื่อเตรียมตัว<br>
+                • จองล่วงหน้าอย่างน้อย 2 ชม.<br>
+                • จองแล้ว **ห้ามยกเลิก** ทุกกรณี<br>
+                • เข้า-ออกห้องซ้อม **ตรงเวลา**<br>
+                <span class="warn">⚠️ 2 อาทิตย์ก่อนสอบ งดใช้ห้องซ้อม</span>
+            </div>
+
+            <label>รหัสนักศึกษา / ชื่อเล่น</label>
+            <input type="text" id="userName" placeholder="รหัสนักศึกษา">
+
+            <label>ชื่อวงดนตรี</label>
+            <input type="text" id="bandName" placeholder="เช่น วงร็อคหน้าใหม่">
+
+            <label>เลือกรอบเวลา (วันนี้)</label>
+            <select id="timeSlot"><option value="">กำลังโหลดคิวว่าง...</option></select>
+            
+            <button id="bookBtn" onclick="bookRoom()">ยืนยันการจอง</button>
+        </div>
+        <p class="foot-note">SUT MUSIC CLUB · ROOM BOOKING</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBta-nZcjJ8CUlJhcDSZbnoWuKjnvO1TNs",
+            databaseURL: "https://music-club-booking-dcd36-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "music-club-booking-dcd36"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const today = new Date();
+        const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+        function loadSchedule() {
+            const slots = (today.getDay() >= 1 && today.getDay() <= 5) 
+                ? ["13:00-14:00", "14:00-15:00", "15:00-16:00", "16:00-17:00"]
+                : ["10:00-11:00", "11:00-12:00", "12:00-13:00", "13:00-14:00", "14:00-15:00"];
+
+            const timeSlotDropdown = document.getElementById("timeSlot");
+            onValue(ref(db, `bookings/${dateStr}`), (snapshot) => {
+                const data = snapshot.val() || {};
+                timeSlotDropdown.innerHTML = "";
+                let hasAvailableSlot = false;
+                slots.forEach(slot => {
+                    const startTime = parseInt(slot.split(":")[0]);
+                    const option = document.createElement("option");
+                    option.value = slot;
+                    if (data[slot]) {
+                        option.disabled = true;
+                        option.innerText = `❌ ${slot} (ถูกจองแล้ว)`;
+                    } else if (startTime <= today.getHours() + 2) {
+                        option.disabled = true;
+                        option.innerText = `🔒 ${slot} (จองไม่ทัน)`;
+                    } else {
+                        option.innerText = `✅ ${slot} (ว่าง)`;
+                        hasAvailableSlot = true;
+                    }
+                    timeSlotDropdown.appendChild(option);
+                });
+                document.getElementById("bookBtn").disabled = !hasAvailableSlot;
+            });
+        }
+        loadSchedule();
+
+        window.bookRoom = async function() {
+            const userName = document.getElementById("userName").value.trim();
+            const bandName = document.getElementById("bandName").value.trim();
+            const timeSlot = document.getElementById("timeSlot").value;
+            
+            if(!userName || !bandName || !timeSlot) return alert("กรุณากรอกข้อมูลให้ครบถ้วน!");
+
+            try {
+                await set(ref(db, `bookings/${dateStr}/${timeSlot}`), { band_name: bandName, user_name: userName, timestamp: Date.now() });
+                await fetch("https://discordapp.com/api/webhooks/1522969851738456128/uLLgTHlfnx27AN_HUSzc-PbyYehMTDAkSWAENmfYOP5yJ4F84AGIqsJVCSn6x4MpjtC6", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: `🎸 **จองสำเร็จ!**\nวง: ${bandName}\nเวลา: ${timeSlot} น.\nโดย: ${userName}\n\n⚠️ *อย่าลืมมาถึงก่อนเวลา 5-10 นาทีนะครับ!*` })
+                });
+                alert("จองสำเร็จ! โปรดเข้าซ้อมให้ตรงเวลาครับ");
+                window.location.reload();
+            } catch (e) { alert("เกิดข้อผิดพลาด"); }
+        }
+    </script>
+</body>
+</html>
